@@ -1,5 +1,5 @@
 CREATE TABLE "DataUsers" (
-  "chat_id" int PRIMARY KEY,
+  "chat_id" int,
   "mail" varchar,
   "date" timestamp
 );
