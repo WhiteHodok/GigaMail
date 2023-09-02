@@ -64,7 +64,7 @@ async def add_mail(message: types.Message, state = FSMContext):
     await message.reply('Введите почту(-ы) для добавления или отправьте .txt файл боту. \n Пример почт в файле:  \n example@mail.ru \n essa@aboba.com', reply_markup=cancel_markup)
     await UserStates.add_mail.set()
 
-@dp.message_handler(state = UserStates.add_mail)
+@dp.message_handler(state = UserStates.add_mail, content_types= ['text'])
 async def add_one_mail(message: types.Message, state= FSMContext):
     await UserStates.send.set() # Обновляем стейт юзера
     chat_id = message.chat.id # Получаем чатид пользователя чтобы идентифицировать его
@@ -99,6 +99,61 @@ async def add_one_mail(message: types.Message, state= FSMContext):
     await UserStates.add_mail.set()
 
 
+@dp.message_handler(content_types=['document'], state=UserStates.add_mail)
+async def add_mails_from_file(message: types.Message, state: FSMContext):
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'  # Паттерн почты для проверки валидности
+    chat_id = message.chat.id
+    document = message.document
+
+    file_bytes = await bot.download_file_by_id(document.file_id)
+
+    # Сохраняем в файл
+    path = f"{document.file_unique_id}.txt"
+    with open(path, 'wb') as f:
+        f.write(file_bytes.getvalue())
+
+    # Далее открываем файл для чтения
+    with open(path, 'r') as f:
+        emails = f.read().splitlines()
+
+
+    valid_mails = []
+    invalid_mails = []
+    existing_mails = []
+
+    for mail in emails:
+        if not re.fullmatch(email_pattern, mail):
+            invalid_mails.append(mail)
+            continue
+
+        result = supabase.table('Mailer').select('id').eq('mail', mail).eq('id', chat_id).execute()
+        if result.data:
+            existing_mails.append(mail)
+            continue
+
+        valid_mails.append(mail)
+
+    # Добавляем валидные почты
+    if valid_mails:
+        date_str = date.today().isoformat()
+        supabase.table('Mailer').insert([{'id': chat_id, 'mail': m, 'date': date_str} for m in valid_mails]).execute()
+
+    # Формируем сообщение пользователю
+    msg = f"Обработано {len(emails)} почт:\n"
+    if valid_mails:
+        msg += f"Добавлено {len(valid_mails)} почт\n"
+    if invalid_mails:
+        msg += f"Невалидные: {len(invalid_mails)} почт\n"
+    if existing_mails:
+        msg += f"Уже существующие: {len(existing_mails)} почт"
+
+    await message.reply(msg)
+
+    # Завершаем state
+    await state.finish()
+    await UserStates.menu.set()
+    # По завершении можно удалить файл
+    os.remove(path)
 
 
 
