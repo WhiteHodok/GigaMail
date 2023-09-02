@@ -51,13 +51,17 @@ class AdminStates(StatesGroup):
     give_roles = State()
 
 #-----------------------------------------------------------------------------------------------------------------------
-# Логика бота
+# Логика бота по разделам
 #-----------------------------------------------------------------------------------------------------------------------
 
-@dp.message_handler(commands=['start'], state ='*')
+@dp.message_handler(commands=['start'], state ='*') # тупо гайд как получить свою клаву пользователя
 async def start(message: types.Message, state = FSMContext):
     await message.reply('Добро пожаловать в бота !', reply_markup=uskmp)
     await UserStates.menu.set()
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Логика добавления почт
+#-----------------------------------------------------------------------------------------------------------------------
 
 @dp.message_handler(text='Добавить почты', state = UserStates.menu)
 async def add_mail(message: types.Message, state = FSMContext):
@@ -103,9 +107,9 @@ async def add_one_mail(message: types.Message, state= FSMContext):
 async def add_mails_from_file(message: types.Message, state: FSMContext):
     email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'  # Паттерн почты для проверки валидности
     chat_id = message.chat.id
-    document = message.document
+    document = message.document # Мы же файл получаем с сообщения юзера
 
-    file_bytes = await bot.download_file_by_id(document.file_id)
+    file_bytes = await bot.download_file_by_id(document.file_id) # качаем наш файл в ByetsIO
 
     # Сохраняем в файл
     path = f"{document.file_unique_id}.txt"
@@ -155,8 +159,36 @@ async def add_mails_from_file(message: types.Message, state: FSMContext):
     # По завершении можно удалить файл
     os.remove(path)
 
+#-----------------------------------------------------------------------------------------------------------------------
+# Логика статистики
+#-----------------------------------------------------------------------------------------------------------------------
+
+@dp.message_handler(text='Статистика', state=UserStates.menu)
+async def statistic(message: types.Message, state=FSMContext):
+    chat_id = message.chat.id
+
+    # Получаем общее количество почт
+    result = supabase.table('Mailer').select('*', count='exact').eq('id', chat_id).execute()
+    today = date.today().isoformat()
+
+    # Тотал почт
+    total_mails = result.count
 
 
+    # Получаем количество почт за сегодня
+    result = supabase.table('Mailer').select('*', count='exact').eq('id', chat_id).gte('date', today).execute()
+    # Тотал за сегодня
+    todays_mails = result.count
+
+
+    # Формируем сообщение
+    msg = f"Всего добавлено: {total_mails} почт\n"
+    msg += f"Сегодня добавлено: {todays_mails} почт"
+
+    await message.reply(msg, reply_markup=uskmp)
+
+    await state.finish()
+    await UserStates.menu.set()
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Колбек на отмену
