@@ -32,3 +32,14 @@ adkmp.row(search)
 adkmp.row(load)
 adkmp.row(rules)
 adkmp.row(back)
+
+# rules keyboard markup
+
+ruleskbm = ReplyKeyboardMarkup(resize_keyboard=True)
+adruler = KeyboardButton("Выдать права")
+delruler = KeyboardButton("Забрать права")
+checkreuler = KeyboardButton("Действующие права")
+back = KeyboardButton('Назад')
+ruleskbm.add(adruler, delruler)
+ruleskbm.row(checkreuler)
+ruleskbm.row(back)
