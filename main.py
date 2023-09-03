@@ -46,8 +46,8 @@ class UserStates(StatesGroup):
 class AdminStates(StatesGroup):
     search = State()
     menu = State()
-    roles = State()
-    give_roles = State()
+    give = State()
+    giveback = State()
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Логика бота по разделам
@@ -107,28 +107,16 @@ async def process_search(message: types.Message, state: FSMContext):
     await state.finish()
     await AdminStates.menu.set()
 
-#-----------------------------------------------------------------------------------------------------------------------
-# Логика прав
-#-----------------------------------------------------------------------------------------------------------------------
-
-@dp.message_handler(text='Права', state=AdminStates.menu)
-async def ruler(message: types.Message, state: FSMContext):
-    await message.reply("Здесь Вы можете выдать права администратору или забрать права администратора", reply_markup=ruleskbm)
-    await AdminStates.roles.set()
 
 
-# Кнопка бека в админ-меню
-@dp.message_handler(text='Назад', state = AdminStates.roles)
-async def back_to_admin(message: types.Message, state: FSMContext):
-    await AdminStates.menu.set()
-    await message.reply("Вы вернулись в панель администратора", reply_markup=adkmp)
+
 
 # Кнопка бека в юзер-меню
 @dp.message_handler(text='Назад', state = AdminStates.menu)
 async def back_to_user(message: types.Message, state:FSMContext):
     await UserStates.menu.set()
     await message.reply("Вы вернулись в юзер-меню", reply_markup=uskmp)
-    
+
 #-----------------------------------------------------------------------------------------------------------------------
 # Логика юзера
 #-----------------------------------------------------------------------------------------------------------------------
