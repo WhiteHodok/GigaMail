@@ -44,8 +44,7 @@ class UserStates(StatesGroup):
     menu = State()
 
 class AdminStates(StatesGroup):
-    check = State()
-    check_user = State()
+    search = State()
     menu = State()
     roles = State()
     give_roles = State()
@@ -54,6 +53,61 @@ class AdminStates(StatesGroup):
 # Логика бота по разделам
 #-----------------------------------------------------------------------------------------------------------------------
 
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Логика админа
+#-----------------------------------------------------------------------------------------------------------------------
+
+@dp.message_handler(commands=['admin'], state='*')
+async def admin_command(message: types.Message, state: FSMContext):
+    # Проверка, что пользователь в списке админов
+    with open('roles.json') as f:
+        admin_roles = json.load(f)['admin']
+
+    if str(message.from_user.id) not in admin_roles:
+        await message.reply("У вас нет прав администратора!", reply_markup=uskmp)
+        return
+
+    # Установка состояния и вывод кнопок админки
+    await AdminStates.menu.set()
+    await message.reply("Вы вошли в панель администратора", reply_markup=adkmp)
+
+
+@dp.message_handler(text='Поиск почты', state=AdminStates.menu)
+async def search_mail(message: types.Message, state: FSMContext):
+    await message.reply("Введите почту для поиска:")
+    await AdminStates.search.set()
+
+@dp.message_handler(state=AdminStates.search)
+async def process_search(message: types.Message, state: FSMContext):
+
+    email = message.text
+
+    result = supabase.table('Mailer').select('id, date').eq('mail', email).execute()
+
+    if not result.data:
+        await message.reply("Почта не найдена")
+        return
+
+    for row in result.data:
+        chat_id = row['id']
+
+        user = await bot.get_chat(chat_id)
+        username = user.username
+
+        date = row['date']
+
+        text = f"Почта: {email}\nОт: @{username}\nДата: {date}"
+
+        await message.reply(text)
+
+    await state.finish()
+    await AdminStates.menu.set()
+
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Логика юзера
+#-----------------------------------------------------------------------------------------------------------------------
 @dp.message_handler(commands=['start'], state ='*') # тупо гайд как получить свою клаву пользователя
 async def start(message: types.Message, state = FSMContext):
     await message.reply('Добро пожаловать в бота !', reply_markup=uskmp)
