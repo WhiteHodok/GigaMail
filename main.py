@@ -73,6 +73,9 @@ async def admin_command(message: types.Message, state: FSMContext):
     await message.reply("Вы вошли в панель администратора", reply_markup=adkmp)
 
 
+#-----------------------------------------------------------------------------------------------------------------------
+# Логика поиска почт
+#-----------------------------------------------------------------------------------------------------------------------
 @dp.message_handler(text='Поиск почты', state=AdminStates.menu)
 async def search_mail(message: types.Message, state: FSMContext):
     await message.reply("Введите почту для поиска:")
@@ -86,7 +89,7 @@ async def process_search(message: types.Message, state: FSMContext):
     result = supabase.table('Mailer').select('id, date').eq('mail', email).execute()
 
     if not result.data:
-        await message.reply("Почта не найдена")
+        await message.reply("Почта не найдена", reply_markup=adkmp)
         return
 
     for row in result.data:
@@ -104,7 +107,28 @@ async def process_search(message: types.Message, state: FSMContext):
     await state.finish()
     await AdminStates.menu.set()
 
+#-----------------------------------------------------------------------------------------------------------------------
+# Логика прав
+#-----------------------------------------------------------------------------------------------------------------------
 
+@dp.message_handler(text='Права', state=AdminStates.menu)
+async def ruler(message: types.Message, state: FSMContext):
+    await message.reply("Здесь Вы можете выдать права администратору или забрать права администратора", reply_markup=ruleskbm)
+    await AdminStates.roles.set()
+
+
+# Кнопка бека в админ-меню
+@dp.message_handler(text='Назад', state = AdminStates.roles)
+async def back_to_admin(message: types.Message, state: FSMContext):
+    await AdminStates.menu.set()
+    await message.reply("Вы вернулись в панель администратора", reply_markup=adkmp)
+
+# Кнопка бека в юзер-меню
+@dp.message_handler(text='Назад', state = AdminStates.menu)
+async def back_to_user(message: types.Message, state:FSMContext):
+    await UserStates.menu.set()
+    await message.reply("Вы вернулись в юзер-меню", reply_markup=uskmp)
+    
 #-----------------------------------------------------------------------------------------------------------------------
 # Логика юзера
 #-----------------------------------------------------------------------------------------------------------------------
